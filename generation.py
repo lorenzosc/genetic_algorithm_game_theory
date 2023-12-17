@@ -8,15 +8,29 @@ from strategy import Strategy, match
 class Generation:
     individuals: list[Strategy]
     archetypes: np.ndarray[int]
+
     pop_size: int
     n_arch: int
 
-    def __init__ (self, pop_size: int, distributions: np.ndarray[np.ndarray]) -> None:
+    podium_size: int
+    arch_points: list[int]
+    arch_podium: list[float]
+    top_podium: list[float]
+    playrate: list[list[float]]
+    winrate: list[list[float]]
+
+    def __init__ (self, pop_size: int, distributions: np.ndarray[np.ndarray], podium_size: int = 10) -> None:
         _, self.n_arch = distributions.shape
         self.pop_size = pop_size
+        self.arch_podium = [ 0 for _ in range(self.n_arch) ]
+        self.top_podium = [ 0 for _ in range(self.n_arch) ]
+        self.playrate = [ [] for _ in range(self.n_arch) ]
+        self.winrate = [ [] for _ in range(self.n_arch) ]
+        self.arch_points = [ np.sum(distributions[idx]) for idx in range(self.n_arch) ]
+        self.podium_size = podium_size
 
         self.individuals = [
-            Strategy(idx, np.sum(distributions[idx]), distributions[idx])
+            Strategy(idx, self.arch_points[idx], distributions[idx])
             for idx in range(self.n_arch)
         ]
         self.avaliate_population()
@@ -52,6 +66,8 @@ class Generation:
 
             strategy.fitness = np.average(fitness)
 
+            self.winrate[strategy.idx].append(strategy.fitness)
+
         self.individuals.sort(key=lambda x: x.fitness, reverse=True)
 
     def preserve_population (self, survival: float = 0.2) -> list[Strategy]:
@@ -76,6 +92,8 @@ class Generation:
 
         print("Archetypes playrate")
         for arch_idx in range(self.n_arch):
+            self.playrate[arch_idx].append(self.archetypes[arch_idx] / self.archetypes.sum() * 100)
+
             print(
                 f"arch: {arch_idx} - "
                 f"{self.archetypes[arch_idx] / self.archetypes.sum() * 100 : .2f}%",
@@ -84,9 +102,11 @@ class Generation:
 
         print("\n ------------------------------- ")
 
-        print("Top 10 - Decks")
-        for ind in self.individuals[ : 10 ]:
+        print(f"Top {self.podium_size} - Decks")
+        self.top_podium[self.individuals[0].idx] += 1
+        for ind in self.individuals[ : self.podium_size ]:
             print(f"Archetype: {ind.idx} - Fitness: {ind.fitness:.3f} - Points: {ind.points}")
+            self.arch_podium[ind.idx] += 1 / self.podium_size
 
         print(" ------------------------------- ")
         population = self.preserve_population()
@@ -102,3 +122,20 @@ class Generation:
     def evolve (self, n_gen: int) -> None:
         for _ in range(n_gen):
             self.generate_new_population()
+
+        print("Presence in the podium for each archetype")
+        for arch_idx in range(self.n_arch):
+            wr = np.array(self.winrate[arch_idx])
+            pr = np.array(self.playrate[arch_idx])
+
+            print(
+                f"Arch: {arch_idx} - Podium%: {self.arch_podium[arch_idx] / n_gen:.2f}"
+                f" Top1%: {self.top_podium[arch_idx] / n_gen:.2f}"
+                f" Avg PlayRate: {pr.mean():.2f}%"
+                f" Pr Std: {pr.std():.2f}"
+                f" Avg WinRate: {wr.mean():.3f}"
+                f" Wr Std: {wr.std():.3f}"
+                f" Base Points: {self.arch_points[arch_idx]}"
+            )
+
+        print()
