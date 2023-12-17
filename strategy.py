@@ -1,5 +1,9 @@
 from __future__ import annotations
+
+import random
+
 import numpy as np
+
 
 class Strategy:
     idx: int
@@ -25,12 +29,12 @@ class Strategy:
         mutable = villains.copy()
 
         while len(villains) != 0:
-            villain = np.random.choice(villains)
+            villain = random.sample(villains, k=1)[0]
             villains.remove(villain)
 
-            chance = np.random.random()
+            chance = random.random()
             if chance <= odds:
-                villain2 = np.random.choice(mutable)
+                villain2 = random.choice(mutable)
                 self.change_distribution(villain, villain2)
 
                 mutable.remove(villain)
@@ -47,7 +51,7 @@ class Strategy:
         points2 = self.distribution[idx2]
         total_points = points1 + points2
 
-        self.distribution[idx1] = np.random.randint(0, total_points + 1)
+        self.distribution[idx1] = random.randint(0, total_points)
         self.distribution[idx2] = total_points - self.distribution[idx1]
 
     def generate_child (
@@ -58,15 +62,15 @@ class Strategy:
 
         child = Strategy(self.idx, self.points, self.distribution)
 
-        villains = set(range(len(child.distribution)))
+        villains = [ idx for idx in range(len(child.distribution)) ]
         villains.remove(self.idx)
         mutable = villains.copy()
 
         while len(villains) > 1:
-            villain = np.random.choice(villains)
+            villain = random.choice(villains)
             villains.remove(villain)
 
-            chance = np.random.random()
+            chance = random.random()
             if chance <= odds:
                 if villain == mother.idx:
                     continue
@@ -74,14 +78,14 @@ class Strategy:
                 mutable.remove(villain)
                 if mother.idx in mutable and len(mutable) > 1:
                     mutable.remove(mother.idx)
-                    villain2 = np.random.choice(mutable)
-                    mutable.add(mother.idx)
+                    villain2 = random.choice(mutable)
+                    mutable.append(mother.idx)
 
                 elif mother.idx in mutable:
                     break
 
                 else:
-                    villain2 = np.random.choice(mutable)
+                    villain2 = random.choice(mutable)
 
                 sf_points = (self.distribution[villain], self.distribution[villain2])
                 sm_points = (mother.distribution[villain], mother.distribution[villain2])
@@ -89,27 +93,32 @@ class Strategy:
                 sf_sum = sum(sf_points)
                 sm_sum = sum(sm_points)
 
-                pctf = sf_points[0] / sf_sum
-                pctm = sm_points[0] / sm_sum
+                if not np.isclose(sf_sum, 0):
+                    pctf = sf_points[0] / sf_sum
+                    pctm = sm_points[0] / sm_sum if not np.isclose(sm_sum, 0) else 0.5
 
-                c_pct = np.random.random() * (pctf - pctm) + pctm
+                    c_pct = random.random() * (pctf - pctm) + pctm
 
-                v1_points = int(sf_sum * c_pct)
-                v2_points = sf_sum - v1_points
+                    v1_points = int(sf_sum * c_pct)
+                    v2_points = sf_sum - v1_points
 
-                child.distribution[villain] = v1_points
-                child.distribution[villain2] = v2_points
+                    child.distribution[villain] = v1_points
+                    child.distribution[villain2] = v2_points
 
                 mutable.remove(villain2)
-                villains.discard(villain2)
+
+                if villain2 in villains:
+                    villains.remove(villain2)
 
             elif chance <= odds + mutation_odds:
                 mutable.remove(villain)
-                villain2 = np.random.choice(mutable)
+                villain2 = random.choice(mutable)
                 child.change_distribution(villain, villain2)
 
                 mutable.remove(villain2)
-                villains.discard(villain2)
+
+                if villain2 in villains:
+                    villains.remove(villain2)
 
         return child
 
@@ -126,7 +135,7 @@ def match (strategy: Strategy, strategy2: Strategy) -> Strategy:
         s2_points = 1
 
     total = s2_points + s1_points
-    winner = np.random.randint(0, total)
+    winner = random.randint(0, total - 1)
 
     if winner < s1_points:
         return strategy.generate_child(strategy2)

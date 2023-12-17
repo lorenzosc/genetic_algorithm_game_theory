@@ -2,7 +2,7 @@
 extend-ignore = ANN101, ANN102,
   B008,
   E201, E202, E203, E211, E221, E241, E302, E305, E402,
-  S110, S112, S322,
+  S110, S112, S322, S311,
   T400, T484, W504
 
 max-line-length = 100
