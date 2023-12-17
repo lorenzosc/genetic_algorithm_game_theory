@@ -40,8 +40,8 @@ class Strategy:
     def change_distribution (self, idx1: int, idx2: int) -> None:
         """Redistributes points between two chromossomes
 
-        :param name1: first chromossome
-        :param name2: second chromossome
+        :param idx1: first chromossome
+        :param idx2: second chromossome
         """
         points1 = self.distribution[idx1]
         points2 = self.distribution[idx2]
@@ -113,7 +113,7 @@ class Strategy:
 
         return child
 
-def match (strategy: Strategy, strategy2: Strategy) -> None:
+def match (strategy: Strategy, strategy2: Strategy) -> Strategy:
     if not isinstance(strategy2, Strategy):
         raise TypeError
 
@@ -129,7 +129,7 @@ def match (strategy: Strategy, strategy2: Strategy) -> None:
     winner = np.random.randint(0, total)
 
     if winner < s1_points:
-        strategy.generate_child(strategy2)
+        return strategy.generate_child(strategy2)
 
     else:
-        strategy2.generate_child(strategy)
+        return strategy2.generate_child(strategy)
