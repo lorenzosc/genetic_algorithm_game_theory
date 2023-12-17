@@ -19,6 +19,9 @@ class Generation:
     playrate: list[list[float]]
     winrate: list[list[float]]
 
+    mnmx_wr: list[tuple[float, float]]
+    mnmx_pr: list[tuple[float, float]]
+
     def __init__ (self, pop_size: int, distributions: np.ndarray[np.ndarray], podium_size: int = 10) -> None:
         _, self.n_arch = distributions.shape
         self.pop_size = pop_size
@@ -26,6 +29,10 @@ class Generation:
         self.top_podium = [ 0 for _ in range(self.n_arch) ]
         self.playrate = [ [] for _ in range(self.n_arch) ]
         self.winrate = [ [] for _ in range(self.n_arch) ]
+
+        self.mnmx_wr = [ (np.inf, 0) for _ in range(self.n_arch) ]
+        self.mnmx_pr = [ (np.inf, 0) for _ in range(self.n_arch) ]
+
         self.arch_points = [ np.sum(distributions[idx]) for idx in range(self.n_arch) ]
         self.podium_size = podium_size
 
@@ -51,6 +58,8 @@ class Generation:
         """
         Function to calculate fitness score and order population
         """
+        wrs = [ [] for _ in range(self.n_arch) ]
+
         for strategy in self.individuals:
             fitness = []
 
@@ -66,7 +75,14 @@ class Generation:
 
             strategy.fitness = np.average(fitness)
 
-            self.winrate[strategy.idx].append(strategy.fitness)
+            wrs[strategy.idx].append(strategy.fitness)
+
+        for arch_idx in range(self.n_arch):
+            self.winrate[arch_idx].append(np.mean(wrs[arch_idx]))
+            self.mnmx_wr[arch_idx] = (
+                min(self.mnmx_wr[arch_idx][0], min(wrs[arch_idx])),
+                max(self.mnmx_wr[arch_idx][1], max(wrs[arch_idx]))
+            )
 
         self.individuals.sort(key=lambda x: x.fitness, reverse=True)
 
@@ -88,27 +104,21 @@ class Generation:
         return new_population
 
     def generate_new_population (self) -> None:
+        self.avaliate_archetypes()
         self.avaliate_population()
 
-        print("Archetypes playrate")
         for arch_idx in range(self.n_arch):
-            self.playrate[arch_idx].append(self.archetypes[arch_idx] / self.archetypes.sum() * 100)
-
-            print(
-                f"arch: {arch_idx} - "
-                f"{self.archetypes[arch_idx] / self.archetypes.sum() * 100 : .2f}%",
-                end=" "
+            pr = self.archetypes[arch_idx] / self.pop_size * 100
+            self.playrate[arch_idx].append(pr)
+            self.mnmx_pr[arch_idx] = (
+                min(self.mnmx_pr[arch_idx][0], pr),
+                max(self.mnmx_pr[arch_idx][1], pr)
             )
 
-        print("\n ------------------------------- ")
-
-        print(f"Top {self.podium_size} - Decks")
         self.top_podium[self.individuals[0].idx] += 1
         for ind in self.individuals[ : self.podium_size ]:
-            print(f"Archetype: {ind.idx} - Fitness: {ind.fitness:.3f} - Points: {ind.points}")
             self.arch_podium[ind.idx] += 1 / self.podium_size
 
-        print(" ------------------------------- ")
         population = self.preserve_population()
 
         weights = [ x.fitness for x in self.individuals ]
@@ -117,25 +127,41 @@ class Generation:
             population.append(match(strategy1, strategy2))
 
         self.individuals = population
-        self.avaliate_archetypes()
 
     def evolve (self, n_gen: int) -> None:
-        for _ in range(n_gen):
+        for idx in range(n_gen):
+            if idx % 100 == 0:
+                print(f"gen idx: {idx}")
+
             self.generate_new_population()
 
         print("Presence in the podium for each archetype")
         for arch_idx in range(self.n_arch):
-            wr = np.array(self.winrate[arch_idx])
             pr = np.array(self.playrate[arch_idx])
+            wr = (np.array(self.winrate[arch_idx])[ 1 : ] * pr) / pr.mean()
 
+            print(f"Arch: {arch_idx} Base Points: {self.arch_points[arch_idx]}")
+
+            print("\tPodium Statistics")
             print(
-                f"Arch: {arch_idx} - Podium%: {self.arch_podium[arch_idx] / n_gen:.2f}"
-                f" Top1%: {self.top_podium[arch_idx] / n_gen:.2f}"
-                f" Avg PlayRate: {pr.mean():.2f}%"
-                f" Pr Std: {pr.std():.2f}"
-                f" Avg WinRate: {wr.mean():.3f}"
-                f" Wr Std: {wr.std():.3f}"
-                f" Base Points: {self.arch_points[arch_idx]}"
+                f"\t\tPodium%: {self.arch_podium[arch_idx] / n_gen:.2f}",
+                f"\t\tTop1%: {self.top_podium[arch_idx] / n_gen:.2f}", sep="\n"
+            )
+
+            print("\tPlayRate Statistics")
+            print(
+                f"\t\tAvg PlayRate: {pr.mean():.2f}%",
+                f"\t\tPr Std: {pr.std():.2f}",
+                # f"\t\tMoving Avg: {}",
+                f"\t\tMin Pr: {self.mnmx_pr[arch_idx][0]:.2f}",
+                f"\t\tMax Pr: {self.mnmx_pr[arch_idx][1]:.2f}", sep="\n"
+            )
+            print("\tWinRate Statistics")
+            print(
+                f"\t\tAvg WinRate: {wr.mean():.3f}",
+                f"\t\tWr Std: {wr.std():.3f}",
+                f"\t\tMin Wr: {self.mnmx_wr[arch_idx][0]:.2f}",
+                f"\t\tMax Wr: {self.mnmx_wr[arch_idx][1]:.2f}", sep="\n"
             )
 
         print()
