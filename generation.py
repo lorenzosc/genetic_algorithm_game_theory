@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from strategy import Strategy, match
 
 
@@ -23,12 +24,15 @@ class Generation:
             fitness = []
 
             for opponent in self.individuals:
-                if strategy.idx == opponent.idx:
-                    continue
 
-                str_points = strategy.distribution[opponent.idx]
-                opp_points = opponent.distribution[strategy.idx]
-                fitness.append(str_points / (str_points + opp_points))
+                if strategy.idx == opponent.idx:
+                    fitness.append(0.5)
+
+                else:
+
+                    str_points = strategy.distribution[opponent.idx]
+                    opp_points = opponent.distribution[strategy.idx]
+                    fitness.append(str_points / (str_points + opp_points))
 
             strategy.fitness = np.average(fitness)
 
@@ -66,9 +70,9 @@ class Generation:
 
         population = self.preserve_population()
 
+        p = [x.fitness for x in self.individuals]
         while len(population) < self.population:
-            strategy1 = np.random.choice(self.population)
-            strategy2 = np.random.choice(self.population)
+            strategy1, strategy2 = random.choices(self.individuals, p, k=2)
             population.append(match(strategy1, strategy2))
 
         self.individuals = population
