@@ -11,6 +11,7 @@ class Generation:
 
     pop_size: int
     n_arch: int
+    n_gen: int
 
     podium_size: int
     arch_points: list[int]
@@ -129,39 +130,10 @@ class Generation:
         self.individuals = population
 
     def evolve (self, n_gen: int) -> None:
+        self.n_gen = n_gen
+
         for idx in range(n_gen):
             if idx % 100 == 0:
                 print(f"gen idx: {idx}")
 
             self.generate_new_population()
-
-        print("Presence in the podium for each archetype")
-        for arch_idx in range(self.n_arch):
-            pr = np.array(self.playrate[arch_idx])
-            wr = (np.array(self.winrate[arch_idx])[ 1 : ] * pr) / pr.mean()
-
-            print(f"Arch: {arch_idx} Base Points: {self.arch_points[arch_idx]}")
-
-            print("\tPodium Statistics")
-            print(
-                f"\t\tPodium%: {self.arch_podium[arch_idx] / n_gen:.2f}",
-                f"\t\tTop1%: {self.top_podium[arch_idx] / n_gen:.2f}", sep="\n"
-            )
-
-            print("\tPlayRate Statistics")
-            print(
-                f"\t\tAvg PlayRate: {pr.mean():.2f}%",
-                f"\t\tPr Std: {pr.std():.2f}",
-                # f"\t\tMoving Avg: {}",
-                f"\t\tMin Pr: {self.mnmx_pr[arch_idx][0]:.2f}",
-                f"\t\tMax Pr: {self.mnmx_pr[arch_idx][1]:.2f}", sep="\n"
-            )
-            print("\tWinRate Statistics")
-            print(
-                f"\t\tAvg WinRate: {wr.mean():.3f}",
-                f"\t\tWr Std: {wr.std():.3f}",
-                f"\t\tMin Wr: {self.mnmx_wr[arch_idx][0]:.2f}",
-                f"\t\tMax Wr: {self.mnmx_wr[arch_idx][1]:.2f}", sep="\n"
-            )
-
-        print()

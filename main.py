@@ -3,10 +3,12 @@ import sys
 import numpy as np
 
 from generation import Generation
+from plotter import Plotter
 
 pop_size = int(sys.argv[1])
 n_gen = int(sys.argv[2])
 d_fname = sys.argv[3]
+plot_name = sys.argv[4]
 distributions = []
 
 with open(d_fname) as df:
@@ -19,3 +21,5 @@ distributions = np.array(distributions).reshape((n_dist, -1))
 
 gen = Generation(pop_size, distributions)
 gen.evolve(n_gen)
+
+Plotter.save_simulation(gen, plot_name)
