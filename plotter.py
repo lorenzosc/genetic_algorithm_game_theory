@@ -10,6 +10,9 @@ from generation import Generation
 class Plotter:
     winrates: list[np.ndarray]
     playrates: list[np.ndarray]
+    avg_winrates: list[float]
+    avg_playrates: list[float]
+
     arch_stats: pd.DataFrame
     
     n_gen: int
@@ -38,12 +41,18 @@ class Plotter:
                 for line in pf.readlines()
             ]
 
+        self.avg_winrates = [ np.mean(winrate) for winrate in self.winrates ]
+        self.avg_playrates = [ np.mean(playrate) for playrate in self.playrates ] 
+
         self.arch_stats = pd.read_csv(
             os.path.join("logs", self.plot_name, "arch_stats.csv"), sep=","
         )
 
     def plot_winrate (self, ax: plt.axes = None) -> None:
-        winrates = [ np.mean(winrate) for winrate in self.winrates ]
+        winrates = [ 
+            np.mean(winrate * playrate) / avg_playrate
+            for winrate, playrate, avg_playrate in zip(self.winrates, self.playrates, self.avg_playrates)
+        ]
         
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 4))
@@ -84,7 +93,7 @@ class Plotter:
             af.write("points,podium,top1,mn_wr,mx_wr\n")
             for arch_idx in range(gen.n_arch):
                 pf.write(",".join(map(lambda x: f"{x:.2f}", gen.playrate[arch_idx])) + "\n")
-                wf.write(",".join(map(lambda x: f"{x:.2f}", gen.winrate[arch_idx])) + "\n")
+                wf.write(",".join(map(lambda x: f"{x:.2f}", gen.winrate[arch_idx][ 1 : ])) + "\n")
 
                 pts, pdm, top1, mn_wr, mx_wr = (
                     gen.arch_points[arch_idx],
