@@ -41,28 +41,32 @@ class Plotter:
                 for line in pf.readlines()
             ]
 
-        self.avg_winrates = [ np.mean(winrate) for winrate in self.winrates ]
         self.avg_playrates = [ np.mean(playrate) for playrate in self.playrates ] 
+        self.avg_winrates = [ 
+            np.mean(winrate * playrate) / avg_playrate
+            for winrate, playrate, avg_playrate 
+            in zip(self.winrates, self.playrates, self.avg_playrates)
+        ]
 
         self.arch_stats = pd.read_csv(
             os.path.join("logs", self.plot_name, "arch_stats.csv"), sep=","
         )
 
-    def plot_winrate (self, ax: plt.axes = None) -> None:
-        winrates = [ 
-            np.mean(winrate * playrate) / avg_playrate
-            for winrate, playrate, avg_playrate in zip(self.winrates, self.playrates, self.avg_playrates)
-        ]
-        
+    def plot_winrate (self, ax: plt.axes = None) -> None:        
+        mn_wr = min(self.avg_winrates)
+        mx_wr = max(self.avg_winrates)
+
+        dif = (mx_wr - mn_wr) * 0.8
+
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 4))
             ax.set_title("Winrate Means")
             ax.set_xlabel("Archetype")
             ax.set_ylabel("Winrate %")
-            ax.set_ylim(bottom=min(winrates) * 0.8, top=max(winrates) * 1.1)
+            ax.set_ylim(bottom=max(0, mn_wr - dif), top=min(1, mx_wr + dif))
 
-        arch_idxs = [ arch_idx for arch_idx in range(len(winrates)) ]
-        ax.bar(arch_idxs, winrates)
+        arch_idxs = [ arch_idx for arch_idx in range(len(self.avg_winrates)) ]
+        ax.bar(arch_idxs, self.avg_winrates)
         ax.plot()
 
         fig.savefig(
@@ -75,8 +79,51 @@ class Plotter:
     def plot_podium_top1 ():
         pass
 
-    def plot_winrate_vs_points (plot_name) -> None:
-        pass
+    def plot_winrate_vs_points (self, ax: plt.axes = None) -> None:      
+        mn_wr = min(self.avg_winrates)
+        mx_wr = max(self.avg_winrates)
+        wr_dif = (mx_wr - mn_wr) * 0.8
+
+        mn_points = min(self.arch_stats.points)
+        mx_points = max(self.arch_stats.points)
+                
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.set_title("Points x Winrate")
+            ax.set_xlabel("Archetype")
+            ax.set_ylabel("Winrate")
+            ax.set_xlim(left=max(0, mn_points -1), right=mx_points + 1)
+            ax.set_ylim(bottom=max(0, mn_wr - wr_dif), top=min(1, mx_wr + wr_dif))
+
+        ax.scatter(self.arch_stats.points, self.avg_winrates)
+        ax.plot()
+
+        fig.savefig(
+            os.path.join("output", self.plot_name, "winrateXpoints"), dpi=300, transparent=False
+        )
+
+    def plot_playrate_vs_points (self, ax: plt.axes = None) -> None:      
+        mn_pr = min(self.avg_playrates)
+        mx_pr = max(self.avg_playrates)
+        pr_dif = (mx_pr - mn_pr) * 0.8
+
+        mn_points = min(self.arch_stats.points)
+        mx_points = max(self.arch_stats.points)
+                
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.set_title("Points x Playrate")
+            ax.set_xlabel("Archetype")
+            ax.set_ylabel("Playrate %")
+            ax.set_xlim(left=max(0, mn_points -1), right=mx_points + 1)
+            ax.set_ylim(bottom=max(0, mn_pr - pr_dif), top=min(100, mx_pr + pr_dif))
+
+        ax.scatter(self.arch_stats.points, self.avg_playrates)
+        ax.plot()
+
+        fig.savefig(
+            os.path.join("output", self.plot_name, "playrateXpoints"), dpi=300, transparent=False
+        )
 
     def save_simulation (gen: Generation, plot_name: str) -> None:
         os.makedirs(os.path.join("logs", plot_name), exist_ok=True)
