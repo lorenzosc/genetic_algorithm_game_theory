@@ -1,0 +1,5 @@
+env_ga/*
+logs/*
+output/*
+
+**.pyc
